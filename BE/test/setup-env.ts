@@ -1,3 +1,5 @@
+import 'reflect-metadata';
+
 process.env.NODE_ENV = 'test';
 process.env.DB_CONFIG_HOST = 'localhost';
 process.env.DB_CONFIG_PORT = '5432';

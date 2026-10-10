@@ -13,6 +13,7 @@
     "outDir": "./dist",
     "baseUrl": "./",
     "strict": true,
+    "isolatedModules": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "types": ["node", "jest"],
