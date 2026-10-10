@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "esModuleInterop": true,
+    "sourceMap": true,
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "types": ["node", "jest"],
+    "paths": {
+      "@modules": ["src/modules/index"],
+      "@config": ["src/config/index"],
+      "@database": ["src/database/index"],
+      "@dtos": ["src/dtos/index"],
+      "@validators": ["src/validators/index"],
+      "@constants": ["src/constants/index"],
+      "@models": ["src/models/index"],
+      "@lib": ["src/libs/index"],
+      "@filters": ["src/common/filters/index"],
+      "@interceptors": ["src/common/interceptors/index"]
+    }
+  },
+  "include": ["src/**/*.ts", "scripts/**/*.ts", "test/**/*.ts"],
+  "exclude": ["node_modules", "dist", "coverage"]
+}
