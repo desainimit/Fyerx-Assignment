@@ -9,3 +9,4 @@ process.env.DB_CONFIG_DATABASE = 'community_events_board_test';
 process.env.DB_CONFIG_SSL = 'false';
 process.env.CORS_ORIGINS = 'http://localhost:3000';
 process.env.SWAGGER = 'false';
+process.env.JWT_SECRET = 'test-only-jwt-secret-with-at-least-32-characters';

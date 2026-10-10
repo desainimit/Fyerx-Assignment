@@ -1,7 +1,7 @@
 import { Global, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SequelizeModule } from '@nestjs/sequelize';
-import { getSequelizeConfig } from '@database';
+import { getSequelizeConfig } from './sequelize/sequelize.config';
 
 @Global()
 @Module({

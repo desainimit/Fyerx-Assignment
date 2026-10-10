@@ -16,9 +16,10 @@ import { IsInt, IsString, Max, Min } from 'class-validator';
 import { Server } from 'node:http';
 import { Sequelize } from 'sequelize-typescript';
 import request from 'supertest';
-import { configureApplication } from '../src/config/app.setup';
-import { AppModule } from '../src/modules/app.module';
-import { DatabaseModule } from '../src/modules/database/database.module';
+import { configureApplication } from '@config';
+import { AppModule } from '@app';
+import { DatabaseModule } from '@database';
+import { Public } from '@decorators';
 
 const connection = { authenticate: jest.fn().mockResolvedValue(undefined) };
 
@@ -42,6 +43,7 @@ class ValidationFixture {
 
 // These routes exist only in the test harness, never in the production modules.
 @Controller({ path: 'test', version: '1' })
+@Public()
 class FixtureController {
   @Post('validation')
   @HttpCode(200)

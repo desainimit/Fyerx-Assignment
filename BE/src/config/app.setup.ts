@@ -6,9 +6,13 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { API_PREFIX, API_VERSION } from '@constants';
+import { LogMiddleware } from '@middlewares/log.middleware';
 
 export function configureApplication(app: INestApplication): void {
   const config = app.get(ConfigService);
+  // Register before Nest's body parser to log malformed requests as well.
+  const logMiddleware = app.get(LogMiddleware);
+  app.use(logMiddleware.use.bind(logMiddleware));
   app.setGlobalPrefix(API_PREFIX);
   app.enableVersioning({
     type: VersioningType.URI,
@@ -34,6 +38,7 @@ export function configureApplication(app: INestApplication): void {
         'Backend foundation. Feature APIs are not implemented yet.',
       )
       .setVersion('1')
+      .addBearerAuth()
       .build();
     const document = SwaggerModule.createDocument(app, documentOptions);
     SwaggerModule.setup(`${API_PREFIX}/docs`, app, document);

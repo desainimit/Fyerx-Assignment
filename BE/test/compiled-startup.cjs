@@ -12,16 +12,18 @@ Object.assign(process.env, {
   DB_CONFIG_SSL: 'false',
   CORS_ORIGINS: 'http://localhost:3000',
   SWAGGER: 'false',
+  JWT_SECRET: 'compiled-test-jwt-secret-at-least-32-characters',
 });
 
 require('reflect-metadata');
-const { Global, Logger, Module } = require('@nestjs/common');
+const { Controller, Get, Global, Logger, Module } = require('@nestjs/common');
 const { Test } = require('@nestjs/testing');
 const { Sequelize } = require('sequelize-typescript');
-const { AppModule } = require('../dist/modules/app.module');
-const { DatabaseModule } = require('../dist/modules/database/database.module');
+const { AppModule } = require('../dist/app.module');
+const { DatabaseModule } = require('../dist/database/database.module');
 const { configureApplication } = require('../dist/config/app.setup');
 const { bootstrap } = require('../dist/main');
+const { AuthService } = require('../dist/modules/auth/auth.service');
 
 Logger.overrideLogger([]);
 assert.equal(typeof bootstrap, 'function');
@@ -41,8 +43,28 @@ Module({
   exports: [Sequelize],
 })(FakeDatabaseModule);
 
+class ProtectedFixtureController {
+  check() {
+    return { message: 'Protected compiled route', data: null };
+  }
+}
+Controller({ path: 'compiled-fixture', version: '1' })(
+  ProtectedFixtureController,
+);
+Get()(
+  ProtectedFixtureController.prototype,
+  'check',
+  Object.getOwnPropertyDescriptor(
+    ProtectedFixtureController.prototype,
+    'check',
+  ),
+);
+
 async function verify() {
-  const module = await Test.createTestingModule({ imports: [AppModule] })
+  const module = await Test.createTestingModule({
+    imports: [AppModule],
+    controllers: [ProtectedFixtureController],
+  })
     .overrideModule(DatabaseModule)
     .useModule(FakeDatabaseModule)
     .compile();
@@ -61,6 +83,19 @@ async function verify() {
     });
     assert.equal((await fetch(`${url}/api/v2/health`)).status, 404);
     assert.equal((await fetch(`${url}/api/docs`)).status, 404);
+    assert.equal((await fetch(`${url}/api/v1/compiled-fixture`)).status, 401);
+    const token = await app.get(AuthService).signAccessToken({
+      id: 'a5ea1813-7eef-4a2c-a7a8-c96099ce2382',
+      role: 'user',
+    });
+    assert.equal(
+      (
+        await fetch(`${url}/api/v1/compiled-fixture`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+      ).status,
+      200,
+    );
   } finally {
     await app.close();
   }

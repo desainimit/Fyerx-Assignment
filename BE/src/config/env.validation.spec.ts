@@ -5,6 +5,7 @@ const valid = {
   DB_CONFIG_USERNAME: 'postgres',
   DB_CONFIG_PASSWORD: 'test-password',
   DB_CONFIG_DATABASE: 'community_events_board',
+  JWT_SECRET: 'test-only-jwt-secret-with-at-least-32-characters',
 };
 
 describe('environment validation', () => {
@@ -16,6 +17,7 @@ describe('environment validation', () => {
       DB_CONFIG_SSL: false,
       SWAGGER: true,
       CORS_ORIGINS: ['http://localhost:3000'],
+      JWT_TTL_SECONDS: 3600,
     });
   });
 
@@ -78,6 +80,24 @@ describe('environment validation', () => {
       'NODE_ENV',
     );
   });
+
+  it.each(['', 'short', ' '.repeat(32)])(
+    'rejects a weak or blank JWT secret',
+    (JWT_SECRET) => {
+      expect(() => validateEnvironment({ ...valid, JWT_SECRET })).toThrow(
+        'JWT_SECRET',
+      );
+    },
+  );
+
+  it.each(['0', '86401', 'abc', '2.5'])(
+    'rejects invalid JWT TTL %s',
+    (JWT_TTL_SECONDS) => {
+      expect(() => validateEnvironment({ ...valid, JWT_TTL_SECONDS })).toThrow(
+        'JWT_TTL_SECONDS',
+      );
+    },
+  );
 
   it('does not include credential values in validation errors', () => {
     expect(() =>

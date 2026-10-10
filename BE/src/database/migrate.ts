@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { MigrationService } from '@lib';
-import { MigrationsModule } from '../modules/database/migrations.module';
+import { MigrationsModule } from './migrations.module';
 
 async function migrate(): Promise<void> {
   const command = process.argv[2];

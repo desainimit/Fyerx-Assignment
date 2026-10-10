@@ -8,9 +8,9 @@ See [backend setup and API documentation](BE/README.md) for installation, config
 
 ## Current status
 
-Implemented: backend tooling, validated configuration, PostgreSQL connection setup, native URI versioning, validation, JSON response/error handling, Swagger, health, migration tooling, and feature scaffolds.
+Implemented: backend tooling, validated configuration, PostgreSQL connection setup, native URI versioning, validation, JSON response/error handling, Swagger, health, migration tooling, feature scaffolds, default JWT protection, public/current-user/role decorators, request logging/context, and reusable automatic Sequelize audit fields.
 
-Pending: admin/user authentication and server protection, event creation/status/filtering/pagination, favourites/feed, persisted reminders, card design, application tables, 15 sample events, Next.js frontend, GitHub publication, and screen recording. There are no admin login credentials yet.
+Pending: admin/user signup and login, password storage, Next.js admin-page protection, event creation/status/filtering/pagination, favourites/feed, persisted reminders, card design, application tables, 15 sample events, Next.js frontend, GitHub publication, and screen recording. There are no admin login credentials yet.
 
 ## Database structure and design
 
@@ -28,11 +28,11 @@ The final README will describe the actual query and indexes rather than claim th
 
 ## Password storage and admin protection
 
-Authentication and admin protection are not implemented, and no admin endpoints are exposed.
-The later auth phase must hash passwords and verify signed, expiring JWTs on the server.
-Admin APIs will require role checks, and Next.js admin pages will enforce access on the server.
-These are pending implementation choices, not security features supplied by the current scaffold.
+The global server guard verifies signed, expiring JWTs by default; only explicitly public routes bypass it.
+The admin scaffold requires the admin role, but exposes no business endpoints or login yet.
+Password hashing and persisted users remain for the signup/login phase; no passwords are stored now.
+Next.js admin-page protection also remains pending because frontend work has not started.
 
 ## AI assistance
 
-OpenAI Codex was used to inspect the reference backend, refine the initial setup plan, generate the scaffold/configuration, implement infrastructure, write tests and documentation, and run checks. The submission owner must review and be able to explain the resulting code.
+OpenAI Codex was used to inspect the reference backend, refine the initial setup plan, generate the scaffold/configuration, implement shared JWT/context/audit infrastructure, write tests and documentation, and run checks. The submission owner must review and be able to explain the resulting code.

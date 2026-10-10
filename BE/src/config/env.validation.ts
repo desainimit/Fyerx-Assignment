@@ -10,6 +10,7 @@ import {
   IsUrl,
   Max,
   Min,
+  MinLength,
   validateSync,
 } from 'class-validator';
 
@@ -88,6 +89,16 @@ export class EnvironmentVariables {
   @Transform(({ value }: { value: unknown }) => toBoolean(value))
   @IsBoolean()
   SWAGGER = false;
+
+  @IsString()
+  @MinLength(32)
+  declare JWT_SECRET: string;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(86400)
+  JWT_TTL_SECONDS = 3600;
 }
 
 export function validateEnvironment(
@@ -114,6 +125,12 @@ export function validateEnvironment(
   if (config.CORS_ORIGINS.some((origin) => new URL(origin).origin !== origin)) {
     throw new Error(
       'Invalid environment configuration: CORS_ORIGINS must contain origins without paths, credentials, or trailing slashes',
+    );
+  }
+
+  if (config.JWT_SECRET.trim().length < 32) {
+    throw new Error(
+      'Invalid environment configuration: JWT_SECRET must contain at least 32 non-padding characters',
     );
   }
 

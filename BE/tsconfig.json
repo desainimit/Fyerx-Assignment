@@ -18,7 +18,8 @@
     "skipLibCheck": true,
     "types": ["node", "jest"],
     "paths": {
-      "@modules": ["src/modules/index"],
+      "@app": ["src/app.module"],
+      "@modules/*": ["src/modules/*"],
       "@config": ["src/config/index"],
       "@database": ["src/database/index"],
       "@dtos": ["src/dtos/index"],
@@ -26,6 +27,11 @@
       "@constants": ["src/constants/index"],
       "@models": ["src/models/index"],
       "@lib": ["src/libs/index"],
+      "@app-types/*": ["src/types/*"],
+      "@context/*": ["src/common/context/*"],
+      "@decorators": ["src/common/decorators/index"],
+      "@guards/*": ["src/common/guards/*"],
+      "@middlewares/*": ["src/common/middlewares/*"],
       "@filters": ["src/common/filters/index"],
       "@interceptors": ["src/common/interceptors/index"]
     }

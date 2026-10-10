@@ -9,6 +9,18 @@ export default tseslint.config(
   {
     languageOptions: { globals: { ...globals.node, ...globals.jest } },
     rules: {
+      'no-duplicate-imports': 'error',
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['../**'],
+              message: 'Use a configured alias for imports across folders.',
+            },
+          ],
+        },
+      ],
       '@typescript-eslint/no-unused-vars': [
         'error',
         { argsIgnorePattern: '^_' },

@@ -1,5 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { SequelizeOptions } from 'sequelize-typescript';
+import { createAuditHooks } from './audit.hooks';
 
 export function getSequelizeConfig(config: ConfigService): SequelizeOptions {
   const ssl = config.getOrThrow<boolean>('DB_CONFIG_SSL');
@@ -12,6 +13,7 @@ export function getSequelizeConfig(config: ConfigService): SequelizeOptions {
     database: config.getOrThrow<string>('DB_CONFIG_DATABASE'),
     models: [],
     logging: false,
+    hooks: createAuditHooks(),
     pool: { max: 5, min: 0, acquire: 5000, idle: 10000 },
     dialectOptions: {
       connectionTimeoutMillis: 5000,

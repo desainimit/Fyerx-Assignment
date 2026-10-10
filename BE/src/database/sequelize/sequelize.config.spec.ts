@@ -1,5 +1,5 @@
 import { ConfigService } from '@nestjs/config';
-import { validateEnvironment } from '../../config/env.validation';
+import { validateEnvironment } from '@config';
 import { getSequelizeConfig } from './sequelize.config';
 
 function config(ssl: string): ConfigService {
@@ -10,6 +10,7 @@ function config(ssl: string): ConfigService {
       DB_CONFIG_PASSWORD: 'test-password',
       DB_CONFIG_DATABASE: 'community_events_board',
       DB_CONFIG_SSL: ssl,
+      JWT_SECRET: 'test-only-jwt-secret-with-at-least-32-characters',
     }),
   );
 }
