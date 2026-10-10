@@ -16,6 +16,7 @@ export function httpImageUrl(value: string): void {
   if (
     !['http:', 'https:'].includes(url.protocol) ||
     !url.hostname ||
+    /\s/.test(value) ||
     value !== value.trim()
   ) {
     throw new Error('Image URL must be a valid HTTP(S) URL');
@@ -31,7 +32,7 @@ export function stickerArray(value: unknown): void {
   if (
     !Array.isArray(value) ||
     value.length > 3 ||
-    !value.every(
+    !Array.from(value).every(
       (item: unknown) =>
         typeof item === 'string' &&
         (STICKER_IDS as readonly string[]).includes(item),

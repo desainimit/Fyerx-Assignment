@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict');
 const path = require('node:path');
+const { readdirSync } = require('node:fs');
 const { spawnSync } = require('node:child_process');
 
 Object.assign(process.env, {
@@ -24,6 +25,7 @@ const { DatabaseModule } = require('../dist/database/database.module');
 const { configureApplication } = require('../dist/config/app.setup');
 const { bootstrap } = require('../dist/main');
 const { AuthService } = require('../dist/modules/auth/auth.service');
+const { APPLICATION_MODELS } = require('../dist/models');
 
 Logger.overrideLogger([]);
 assert.equal(typeof bootstrap, 'function');
@@ -61,6 +63,27 @@ Get()(
 );
 
 async function verify() {
+  const registry = new Sequelize({
+    dialect: 'postgres',
+    models: APPLICATION_MODELS,
+    logging: false,
+  });
+  assert.equal(Object.keys(registry.models).length, 6);
+  assert.equal(
+    registry.models.EventModel.associations.category.target,
+    registry.models.CategoryModel,
+  );
+  await registry.close();
+  const migrationsDirectory = path.resolve(__dirname, '../dist/migrations');
+  const migrations = readdirSync(migrationsDirectory).filter((name) =>
+    /^[0-9].*\.js$/.test(name),
+  );
+  assert.equal(migrations.length, 6);
+  for (const name of migrations) {
+    const migration = require(path.join(migrationsDirectory, name));
+    assert.equal(typeof migration.up, 'function');
+    assert.equal(typeof migration.down, 'function');
+  }
   const module = await Test.createTestingModule({
     imports: [AppModule],
     controllers: [ProtectedFixtureController],

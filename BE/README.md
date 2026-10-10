@@ -1,6 +1,6 @@
 # Backend foundation
 
-NestJS 11 with strict TypeScript, PostgreSQL, and Sequelize. This phase implements the foundation, shared authentication/audit infrastructure, and health. Feature controllers have no business handlers or login endpoints.
+NestJS 11 with strict TypeScript, PostgreSQL, and Sequelize. The foundation includes shared authentication/audit infrastructure, health, six typed application models, and six per-table migrations. Feature controllers have no business handlers or login endpoints. See [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) for the ER diagram, constraints, indexes, query contract, and migration order.
 
 ## Quick setup
 
@@ -27,6 +27,7 @@ There is no default signing secret. Use a separate secret in each environment; n
 Then start the backend:
 
 ```powershell
+npm run db:migrate
 npm run dev
 ```
 
@@ -73,8 +74,8 @@ src/
     card-design/
   config/                environment validation and application setup
   database/              connection/migration modules, CLI, and sequelize/ options + audit hooks
-  models/                reusable AuditModel; no application models yet
-  migrations/            timestamped application migrations, currently empty
+  models/                AuditModel, six application models, explicit registry
+  migrations/            six timestamped per-table migrations
   libs/                  migration service
   dtos/                  shared response types
   validators/            reserved request validation classes
@@ -154,7 +155,7 @@ export class EventsController {
 
 `@CurrentUser()` supplies the frozen, verified identity; `@CurrentUser('id')` supplies its ID. `@Roles(UserRole.Admin)` restricts access to admins and is already attached to the admin scaffold. Handler metadata overrides controller metadata. `@Public(false)` makes a handler protected inside a public controller.
 
-Public routes skip authentication entirely, even if a token is supplied: their current user is undefined and audit actor is null. Do not mark a write that needs user attribution public. Authentication here is token verification only; user persistence, password validation, signup/login, disabled-account checks, and token revocation are pending. Future login services can import `AuthModule` and call `AuthService.signAccessToken()` after checking credentials; there is no HTTP token-minting endpoint.
+Public routes skip authentication entirely, even if a token is supplied: their current user is undefined and audit actor is null. Do not mark a write that needs user attribution public. Authentication here is token verification only; password hashing/credential validation, signup/login, disabled-account checks, and token revocation are pending. Future login services can import `AuthModule` and call `AuthService.signAccessToken()` after checking credentials; there is no HTTP token-minting endpoint. Users now have a database model, but no account creation API or admin account is supplied.
 
 ## Request logging and context
 
@@ -164,7 +165,7 @@ The guard places the verified user in `RequestContextService`. Context survives 
 
 ## Automatic audit fields
 
-Future Sequelize models should extend `AuditModel` from `src/models`. It supplies `createdAt`, `updatedAt`, `createdBy`, and `updatedBy`; actor IDs are nullable UUIDs. Add matching columns explicitly in each table migration. The base class is not itself registered as a table, and this step creates no application tables.
+All six application models extend `AuditModel` from `@models`. It supplies `createdAt`, `updatedAt`, `createdBy`, and `updatedBy`; actor IDs are nullable UUID foreign keys to users. Each table migration defines matching columns and database timestamp defaults explicitly. The base class is not registered as a table. Model loading and schema synchronization are disabled; the shared connection registers the six concrete models explicitly.
 
 Permanent hooks in the shared Sequelize configuration stamp the actual create/update operation from request context. Native timestamps record when writes happen. Creation fields remain unchanged on updates; supplied audit values are overwritten or stripped. Instance create/update/save and bulk create/update are covered, including restricted `fields` and bulk conflict updates through `updateOnDuplicate`. Non-audited models and migration tracking are unaffected.
 
@@ -174,19 +175,20 @@ These are ORM hooks, not PostgreSQL triggers or an audit history table. Raw SQL,
 
 ## Commands
 
-| Command                               | Purpose                                       |
-| ------------------------------------- | --------------------------------------------- |
-| `npm run dev` / `npm run local`       | Development watch mode                        |
-| `npm run debug`                       | Development debugger and watch mode           |
-| `npm run build`                       | Compile with Nest CLI                         |
-| `npm run prod`                        | Start compiled production backend             |
-| `npm run check-types`                 | Type-check source, scripts, and tests         |
-| `npm run check-lint`                  | Check ESLint without rewriting files          |
-| `npm run check-format`                | Check formatting without rewriting files      |
-| `npm run lint:fix` / `npm run format` | Apply lint or formatting fixes                |
-| `npm test`                            | Unit tests                                    |
-| `npm run test:e2e`                    | HTTP infrastructure tests                     |
-| `npm run test:compiled`               | Verify compiled HTTP startup; run build first |
+| Command                               | Purpose                                           |
+| ------------------------------------- | ------------------------------------------------- |
+| `npm run dev` / `npm run local`       | Development watch mode                            |
+| `npm run debug`                       | Development debugger and watch mode               |
+| `npm run build`                       | Compile with Nest CLI                             |
+| `npm run prod`                        | Start compiled production backend                 |
+| `npm run check-types`                 | Type-check source, scripts, and tests             |
+| `npm run check-lint`                  | Check ESLint without rewriting files              |
+| `npm run check-format`                | Check formatting without rewriting files          |
+| `npm run lint:fix` / `npm run format` | Apply lint or formatting fixes                    |
+| `npm test`                            | Unit tests                                        |
+| `npm run test:e2e`                    | HTTP infrastructure tests                         |
+| `npm run test:db`                     | Real schema tests in an empty disposable database |
+| `npm run test:compiled`               | Verify compiled HTTP startup; run build first     |
 
 ## Migrations
 
@@ -209,16 +211,32 @@ npm run db:migrate:prod
 npm run prod
 ```
 
-Umzug tracks executed migrations in `SequelizeMeta`. Commands with no pending migrations succeed without creating application tables. Normal backend startup does not create this metadata table.
+Umzug tracks executed migrations in `SequelizeMeta`. The six migrations create users, categories, events, favourites, reminders, and card designs in dependency order; categories include the five required rows. Every migration has transactional up/down operations with frozen definitions. Commands with no pending migrations make no application schema changes. Normal backend startup does not create tables or migration tracking. Changing deployed schema requires a new migration.
+
+The user model normalizes emails and excludes `passwordHash` from default queries; `UserModel.scope('authentication')` includes it. This does not sanitize create results or replace safe API DTOs. No password hashing service exists yet.
+
+## Real PostgreSQL verification
+
+Create an **empty disposable** PostgreSQL database separately; its name must end in `_test` and differ from `DB_CONFIG_DATABASE`. Do not reuse the application's database. The suite loads `.env.test` then `.env`, checks the actual connection/schema, refuses existing tables in user schemas, and holds an advisory lock so another verification run cannot share its target.
+
+```powershell
+$env:TEST_DATABASE_URL = 'postgresql://tester:YOUR_PASSWORD@localhost:5432/community_events_schema_test'
+npm run test:db
+Remove-Item Env:TEST_DATABASE_URL
+```
+
+Percent-encode special characters in URL credentials. Use a dedicated test account with permission to create/drop tables in that disposable database. Configure hosted TLS through the URL as required by your provider; do not disable certificate verification.
+
+The suite runs fresh migrations and category checks, verifies rerun status, constraints, foreign keys, composite keys, actual audit persistence, filters/pagination/feed isolation, reverse rollback, and reapplication. Cleanup removes its migrated tables and `SequelizeMeta` in dependency order without CASCADE drops. Interrupted runs can leave tables behind; inspect the disposable database and recreate it yourself rather than weakening the safety checks. Missing `TEST_DATABASE_URL` fails clearly instead of silently skipping the suite.
 
 ## Verification and remaining work
 
-Unit tests cover configuration parsing, fail-fast validation without credential leakage, TLS verification, safe migration generation, migration discovery/execution using in-memory tracking, and audit values reaching native Sequelize write calls (SQL execution stubbed).
+Unit tests cover configuration parsing, fail-fast validation without credential leakage, TLS verification, safe migration generation, migration discovery/execution using in-memory tracking, all six model associations/column mappings/validators/scopes, disposable-database refusal checks, and audit values reaching native Sequelize write calls (SQL execution stubbed).
 
 HTTP tests use a database stub to cover native versioning, health failures/recovery, request validation, safe JSON errors, CORS, optional Swagger, JWT rejection, public/role metadata overrides, current-user injection, concurrent context isolation, and safe request logging. Test fixture routes are never registered in production.
 
-The compiled-startup check starts built application modules with a database stub, checks HTTP routing and disabled Swagger, and checks that the actual compiled entry exits on invalid configuration. It loads no TypeScript runtime loader.
+The compiled-startup check initializes the built model registry, loads all six compiled migrations, starts built application modules with a database stub, checks HTTP routing and disabled Swagger, and checks that the actual compiled entry exits on invalid configuration. It loads no TypeScript runtime loader.
 
-Live PostgreSQL connectivity and migration metadata persistence require your database credentials and are not proven by the stubbed tests. Once configured, run the health request and migration commands above.
+Live PostgreSQL verification is unverified until `npm run test:db` runs with supplied disposable database credentials. Type checking, model metadata checks, and stubbed HTTP tests do not prove SQL execution. Once application credentials are configured, run the health request and migration commands above.
 
-Signup/login and account security, event APIs/tables, filters, pagination, favourites/feed, reminders, card designs, seed events, and the Next.js frontend remain pending. The root README records assignment answers and AI assistance.
+Signup/login and password hashing, admin credentials, event APIs, filters, pagination, favourites/feed APIs, reminder/design APIs, the 15 seed events, and the Next.js frontend remain pending. The root README records assignment answers and AI assistance.

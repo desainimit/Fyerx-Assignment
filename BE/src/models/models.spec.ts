@@ -49,6 +49,8 @@ describe('application model registry', () => {
       expect(attributes.updatedBy.field).toBe('updated_by');
       expect(attributes.createdAt.field).toBe('created_at');
       expect(attributes.updatedAt.field).toBe('updated_at');
+      expect(attributes.createdAt.allowNull).toBe(false);
+      expect(attributes.updatedAt.allowNull).toBe(false);
     }
   });
 
@@ -120,11 +122,20 @@ describe('application model registry', () => {
     { description: '  ' },
     { imageUrl: 'ftp://example.com/file' },
     { imageUrl: 'https://' },
+    { imageUrl: 'https://example.com/image with spaces.jpg' },
     { startsAt: new Date('invalid') },
   ])('rejects invalid event attributes: %j', async (invalid) => {
     await expect(
       EventModel.build({ ...event, ...invalid }).validate(),
     ).rejects.toThrow();
+  });
+
+  it('accepts case-insensitive HTTP(S) schemes', async () => {
+    const instance = EventModel.build({
+      ...event,
+      imageUrl: 'HTTPS://example.com/event.jpg',
+    });
+    await expect(instance.validate()).resolves.toBe(instance);
   });
 
   it.each([{ stickers: [] }, { stickers: ['star', 'star', 'party'] }])(
@@ -141,6 +152,7 @@ describe('application model registry', () => {
     [['unknown']],
     [[null]],
     [[['star']]],
+    [new Array(1)],
   ])('rejects invalid sticker lists: %j', async (stickers) => {
     const design = EventCardDesignModel.build({ userId, eventId });
     design.setDataValue('stickers', stickers as typeof design.stickers);
