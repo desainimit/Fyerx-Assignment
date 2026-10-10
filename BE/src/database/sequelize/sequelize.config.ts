@@ -1,5 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { SequelizeOptions } from 'sequelize-typescript';
+import { APPLICATION_MODELS } from '@models';
 import { createAuditHooks } from './audit.hooks';
 
 export function getSequelizeConfig(config: ConfigService): SequelizeOptions {
@@ -11,7 +12,7 @@ export function getSequelizeConfig(config: ConfigService): SequelizeOptions {
     username: config.getOrThrow<string>('DB_CONFIG_USERNAME'),
     password: config.getOrThrow<string>('DB_CONFIG_PASSWORD'),
     database: config.getOrThrow<string>('DB_CONFIG_DATABASE'),
-    models: [],
+    models: APPLICATION_MODELS,
     logging: false,
     hooks: createAuditHooks(),
     pool: { max: 5, min: 0, acquire: 5000, idle: 10000 },

@@ -10,7 +10,7 @@ import { getSequelizeConfig } from './sequelize/sequelize.config';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         ...getSequelizeConfig(config),
-        autoLoadModels: true,
+        autoLoadModels: false,
         synchronize: false,
         retryAttempts: 3,
         retryDelay: 1000,
