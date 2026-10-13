@@ -21,3 +21,9 @@ export {
   EventDto,
   EventFiltersDto,
 } from './event.dtos';
+export {
+  FavouritesDto,
+  ReminderDto,
+  ReminderListDto,
+  CardDesignDto,
+} from './preference.dtos';

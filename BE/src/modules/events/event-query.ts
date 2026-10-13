@@ -1,3 +1,4 @@
+import { NotFoundException } from '@nestjs/common';
 import {
   Op,
   col,
@@ -83,4 +84,11 @@ export function pageMeta(
   total: number,
 ): PaginationMetadata {
   return { total, page, limit, totalPages: Math.ceil(total / limit) };
+}
+
+/** Reminders and card designs can only be saved for active events. */
+export async function assertActiveEvent(id: string): Promise<void> {
+  if (!(await EventModel.count({ where: { id, isActive: true } }))) {
+    throw new NotFoundException('Event not found');
+  }
 }
