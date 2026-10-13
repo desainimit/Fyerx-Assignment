@@ -102,7 +102,10 @@ export function EventsBrowser() {
             update({ category: value === ALL ? "" : value })
           }
         >
-          <SelectTrigger className="h-10 w-full" aria-label="Category">
+          <SelectTrigger
+            className="w-full data-[size=default]:h-10"
+            aria-label="Category"
+          >
             <SelectValue placeholder="Category" />
           </SelectTrigger>
           <SelectContent>
@@ -118,7 +121,10 @@ export function EventsBrowser() {
           value={city || ALL}
           onValueChange={(value) => update({ city: value === ALL ? "" : value })}
         >
-          <SelectTrigger className="h-10 w-full" aria-label="City">
+          <SelectTrigger
+            className="w-full data-[size=default]:h-10"
+            aria-label="City"
+          >
             <SelectValue placeholder="City" />
           </SelectTrigger>
           <SelectContent>

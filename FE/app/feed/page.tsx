@@ -78,7 +78,7 @@ export default function FeedPage() {
           description="Nothing is scheduled right now. Add more categories or browse all events."
           action={
             <div className="flex flex-wrap justify-center gap-2">
-              <Button asChild variant="outline" size="lg">
+              <Button asChild variant="outline" size="lg" className="h-full">
                 <Link href="/favourites">Add categories</Link>
               </Button>
               <Button asChild size="lg">

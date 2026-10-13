@@ -163,7 +163,7 @@ export default function NewEventPage() {
                 value={form.categoryCode}
                 onValueChange={(value) => set("categoryCode", value)}
               >
-                <SelectTrigger id="category" className="h-10 w-full" {...field("categoryCode")}>
+                <SelectTrigger id="category" className="w-full data-[size=default]:h-10" {...field("categoryCode")}>
                   <SelectValue placeholder="Choose a category" />
                 </SelectTrigger>
                 <SelectContent>

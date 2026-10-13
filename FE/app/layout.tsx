@@ -21,8 +21,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const user = await verifySession((await cookies()).get(SESSION_COOKIE)?.value);
 
   return (
-    <html lang="en" className={`${sans.variable} h-full antialiased`}>
-      <body className="flex min-h-full flex-col">
+    <html suppressHydrationWarning lang="en" className={`${sans.variable} h-full antialiased`}>
+      <body suppressHydrationWarning className="flex min-h-full flex-col">
         <SessionProvider user={user}>
           <SiteHeader />
           <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 md:py-10">
