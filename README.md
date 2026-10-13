@@ -1,38 +1,128 @@
 # Community Events Board
 
-Backend foundation and database schema for the assignment. The frontend directory is untouched.
+An admin posts local events (music nights, workshops, food fairs…). Visitors browse and filter them, sign up, pick favourite categories for a personal feed, set reminders, and design a card for each event.
 
-The backend uses NestJS 11, TypeScript, PostgreSQL, and Sequelize. Features live under `BE/src/modules/<feature>`, each with its controller, service, and module. Nest handles URI versioning through controller metadata.
+- **Frontend:** Next.js 16 (App Router), Tailwind CSS 4, shadcn/ui, Motion: [`FE/`](FE/)
+- **Backend:** NestJS 11 JSON API, PostgreSQL 16, Sequelize: [`BE/`](BE/)
 
-See [backend setup and API documentation](BE/README.md) for installation, configuration, commands, and verification.
+The web pages only talk to the JSON API, so a mobile app can use the same endpoints with a Bearer token.
 
-## Current status
+## Run it locally (about 5 minutes)
 
-Implemented: backend tooling, validated configuration, PostgreSQL connection setup, native URI versioning, validation, JSON response/error handling, Swagger, health, migration tooling, feature scaffolds, default JWT protection, public/current-user/role decorators, request logging/context, automatic Sequelize audit fields, six typed models, six per-table migrations, and the five required categories. See [database schema](BE/DATABASE_SCHEMA.md).
+Requirements: **Node.js 22+** and **Docker Desktop**. Without Docker, use any PostgreSQL 14+ and edit the `DB_CONFIG_*` values in `BE/.env`.
 
-Pending: admin/user signup and login, password hashing, Next.js admin-page protection, event creation/status/filtering/pagination APIs, favourites/feed APIs, reminder/card design APIs and UI, 15 sample events, Next.js frontend, GitHub publication, and screen recording. There are no admin login credentials yet. Live PostgreSQL migration/constraint checks require a supplied disposable `TEST_DATABASE_URL` and remain unverified.
+```bash
+# 1. Database (PostgreSQL 16 on host port 55432)
+docker compose up -d
 
-## Database structure and design
+# 2. Env files: creates BE/.env and FE/.env.local with one shared random JWT secret
+node scripts/setup-env.mjs
 
-Six tables store users, categories, events, favourite categories, reminders, and per-user event card designs.
-Stable category codes and foreign keys keep relationships explicit; composite keys prevent duplicate preferences.
-Prices use integer paise, event times use TIMESTAMPTZ, and inactive events remain stored.
-All tables share audit fields; [the schema document](BE/DATABASE_SCHEMA.md) includes the ER diagram and constraints.
+# 3. Backend: http://localhost:3001 (Swagger docs at /api/docs)
+cd BE
+npm ci
+npm run db:migrate
+npm run db:seed
+npm run dev
 
-## Filter query and indexes
+# 4. Frontend, in a second terminal: http://localhost:3000
+cd FE
+npm ci
+npm run dev
+```
 
-The documented query combines active/upcoming, category, case-insensitive city, and escaped substring conditions with AND.
-Pagination orders by start time and ID; count queries use the same conditions. Business endpoints remain pending.
-Migrations add date/order, category/date, and lower(city)/date indexes rather than every filter combination.
-GIN trigram indexes on title and description are deferred until measured search workloads justify them.
+`npm run db:seed` creates the admin account and 15 sample events: 10 upcoming, 3 past and 2 inactive, across all five categories and four cities. Event dates are set relative to the moment you run the seed, so the upcoming events stay upcoming whenever you try it. Re-running the seed is safe.
 
-## Password storage and admin protection
+### Admin login
 
-The global server guard verifies signed, expiring JWTs by default; only explicitly public routes bypass it.
-The admin scaffold requires the admin role, but exposes no business endpoints or login yet.
-The users table stores only a nonblank hash field, excluded from default reads; salted password hashing still needs implementation.
-Next.js admin-page protection also remains pending because frontend work has not started.
+| URL | Email | Password |
+| --- | --- | --- |
+| http://localhost:3000/admin/login | `admin@example.com` | `Admin@12345` |
+
+These come from `ADMIN_EMAIL` / `ADMIN_PASSWORD` in `BE/.env`. Visitors create their own accounts at `/signup`.
+
+## API
+
+Base URL `http://localhost:3001/api/v1`. Every response is JSON in the form `{ status, message, data, metaData? }`. Protected routes need `Authorization: Bearer <token>`.
+
+| Method | Path | Access | Purpose |
+| --- | --- | --- | --- |
+| POST | `/auth/signup` | Public | Create a visitor account, returns `{ token, user }` |
+| POST | `/auth/login` | Public | Log in (visitor or admin), returns `{ token, user }` |
+| GET | `/auth/me` | User | Current user and whether favourites are set |
+| GET | `/events?category=&city=&q=&page=&limit=` | Public | Active upcoming events, nearest first, filters combined |
+| GET | `/events/filters` | Public | Categories and cities for the filter controls |
+| GET | `/events/:id` | Public | One active event |
+| GET / PUT | `/favourites` | User | Read or replace favourite categories |
+| GET | `/feed?page=&limit=` | User | Upcoming events from favourite categories |
+| GET | `/reminders` | User | Ids of events with a reminder |
+| PUT | `/reminders/:eventId` | User | `{ enabled }` turns a reminder on or off |
+| GET / PUT | `/card-design/:eventId` | User | Read or save `{ theme, stickers }` |
+| GET | `/admin/events?page=&limit=` | Admin | All events, including inactive and past |
+| POST | `/admin/events` | Admin | Create an event |
+| PATCH | `/admin/events/:id/status` | Admin | `{ isActive }`; events are never deleted |
+| GET | `/health` | Public | API and database status |
+
+The Next.js app adds `/api/auth/login`, `/api/auth/signup` and `/api/auth/logout`, which manage the session cookie. It also forwards `/api/*` to the routes above.
+
+## Questions
+
+### 1. Database structure, and why
+
+```
+users (id, email UNIQUE, password_hash, role)
+categories (code PK, name)                     -- music, workshop, food, sports, kids
+events (id, title, category_code FK, city, starts_at TIMESTAMPTZ,
+        price_paise INTEGER, description, image_url, is_active)
+user_favourite_categories (user_id, category_code)          PK (user_id, category_code)
+event_reminders (user_id, event_id, enabled)                 PK (user_id, event_id)
+event_card_designs (user_id, event_id, theme, stickers[])    PK (user_id, event_id)
+```
+
+Each user preference is one row keyed by `(user, category)` or `(user, event)`. The composite primary key blocks duplicates, and saving can be a single `INSERT … ON CONFLICT`, so quick repeated taps can't race.
+
+Prices are stored as integer paise (₹1,50,000 = 15000000) to avoid float rounding. Times are stored as `TIMESTAMPTZ` and shown in India time.
+
+Deactivating an event only flips `is_active`, so nothing is ever deleted. CHECK constraints and foreign keys hold the rules even if the application has a bug. The full diagram is in [`BE/DATABASE_SCHEMA.md`](BE/DATABASE_SCHEMA.md).
+
+### 2. How the filter query works, and which index
+
+Every condition is joined with AND: `is_active AND starts_at > now`, then each filter only if it was given:
+- `category_code = ?`
+- `lower(city) = lower(?)`
+- `(title ILIKE ? OR description ILIKE ?)`
+
+Search text is escaped, so `%` and `_` match literally. Results are ordered `starts_at, id`, and `LIMIT/OFFSET` returns the page. The same WHERE clause feeds the count used for pagination.
+
+These indexes exist already, in the migration: `(is_active, starts_at, id)`, `(category_code, is_active, starts_at, id)` and `(lower(city), is_active, starts_at, id)`. They match the equality filters plus the sort, so the database can read rows already in date order.
+
+The next index I would add is a `pg_trgm` GIN index on `title` and `description`, because `ILIKE '%night%'` can't use a normal B-tree. It isn't worth it at this data size, so I'd add it only once real search traffic shows it's needed.
+
+### 3. Passwords and admin protection
+
+**Passwords.** They are hashed with **scrypt**, built into Node, using a random 16-byte salt per password. The cost settings are stored inside the hash, and checks use a constant-time compare. Wrong passwords and unknown emails get the same 401 and take about the same time. Signup always creates role `user`, and extra fields such as `role` are rejected.
+
+**Tokens.** After login, Next.js stores the JWT in an **httpOnly, SameSite=Lax** cookie, so page scripts can't read it.
+
+**Admin protection** works on three server-side layers:
+1. `FE/proxy.ts` checks the JWT's signature, expiry, issuer and role before `/admin` renders, and redirects otherwise.
+2. The admin layout checks the role again.
+3. The NestJS API guards every route by default, and `@Roles(Admin)` on the admin controller returns 401 or 403 even if someone calls the API directly.
+
+## What's left / known limitations
+
+- **Screen recording**: still to do.
+- **Tokens** last one hour, with no refresh or server-side revocation. Logging out deletes the cookie.
+- **Pagination** uses offset paging, so a page can shift if events change between requests.
+- **Reminders and card designs** need an account. The brief asks for them to be saved through the API, which needs to know who the user is.
+- **Admins** can create and activate or deactivate events, but can't edit them. The brief doesn't ask for editing.
+- **Deployment**: the app isn't deployed. Everything runs locally.
 
 ## AI assistance
 
-OpenAI Codex was used to inspect the reference backend, refine the setup/schema plans, generate the scaffold/configuration, implement shared JWT/context/audit infrastructure and database models/migrations, write tests and documentation, and run checks. The submission owner must review and be able to explain the resulting code.
+- **OpenAI Codex** was used for the backend foundation: scaffold, configuration, JWT guard, request context, audit fields, models, migrations and their tests.
+- **Claude Code (Claude Opus 5.5)** was used to build the rest:
+  - Docker setup, password hashing, seed data and the env setup script.
+  - All feature endpoints: auth, events, admin, favourites, feed, reminders and card design.
+  - The whole Next.js frontend.
+  - Browser-based checks and this README.

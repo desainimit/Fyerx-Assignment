@@ -35,7 +35,7 @@ export function configureApplication(app: INestApplication): void {
     const documentOptions = new DocumentBuilder()
       .setTitle('Community Events Board API')
       .setDescription(
-        'Backend foundation. Feature APIs are not implemented yet.',
+        'JSON API for the Community Events Board. Protected routes need the token from /auth/login as `Authorization: Bearer <token>`.',
       )
       .setVersion('1')
       .addBearerAuth()

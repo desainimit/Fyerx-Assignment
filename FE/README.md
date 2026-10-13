@@ -1,36 +1,37 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Frontend (Next.js)
 
-## Getting Started
-
-First, run the development server:
+Next.js 16 App Router, Tailwind CSS 4, shadcn/ui (Radix), Motion and lucide icons. For setup, see the [root README](../README.md).
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run dev     # http://localhost:3000 (the backend must be running on :3001)
+npm run build   # production build
+npm run lint
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## How it talks to the API
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- The browser only calls this app's `/api/*` routes.
+- `app/api/auth/{login,signup,logout}` call the backend and keep the returned JWT in an **httpOnly, SameSite=Lax** cookie (`ceb_session`). The token never reaches page JavaScript.
+- `app/api/[...path]/route.ts` forwards every other `/api/*` request to `BACKEND_URL` and adds `Authorization: Bearer <token>` from the cookie.
+- `proxy.ts` checks the JWT on the server (signature, expiry, issuer, audience and role) before `/admin`, `/feed` and `/favourites` render. The admin layout checks the role again.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Where things are
 
-## Learn More
+```text
+app/page.tsx                 events list (filters live in the URL)
+app/events/[id]/             event page: Remind me + Design your card
+app/feed, app/favourites     personal feed and category picker
+app/login, app/signup        visitor auth
+app/admin/login              admin login
+app/admin/(dashboard)/       admin event list and "Add event" form
+components/                  event card, header, states, pagination, card designer, remind button
+lib/format.ts                ₹ prices (en-IN) and "Sat, 18 Oct, 6:30 PM" dates in India time
+lib/use-api.ts               data loading with loading/error state and request cancelling
+```
 
-To learn more about Next.js, take a look at the following resources:
+`.env.local` (created by `node ../scripts/setup-env.mjs`):
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Variable | Value |
+| --- | --- |
+| `BACKEND_URL` | `http://localhost:3001/api/v1` |
+| `JWT_SECRET` | Same value as `BE/.env` |

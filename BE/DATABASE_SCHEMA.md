@@ -1,6 +1,6 @@
 # Community Events Board database
 
-PostgreSQL 14+ and Sequelize. This document describes the six application tables implemented by the models and migrations. Business APIs, password hashing, admin credentials, and the 15 sample events are still pending. Only the five assignment categories are seeded.
+PostgreSQL 14+ and Sequelize. This document describes the six application tables implemented by the models and migrations. Migrations seed the five assignment categories; `npm run db:seed` adds the admin account and 15 sample events.
 
 ## Relationships
 
@@ -75,9 +75,9 @@ Application columns below are NOT NULL. UUID primary keys default to `gen_random
 | `password_hash` | TEXT         | Nonblank encoded hash; never a plaintext password |
 | `role`          | VARCHAR(8)   | `user` or `admin`, default `user`                 |
 
-The model trims/lowercases email and validates its format; the database enforces canonical storage and uniqueness. Password hashing is **not implemented in this phase**. A nonblank check cannot prove that a string is a secure password hash; the later authentication service must generate and verify salted hashes using a suitable password hashing algorithm. See [OWASP password storage guidance](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html).
+The model trims/lowercases email and validates its format; the database enforces canonical storage and uniqueness. `src/utils/password.ts` stores `scrypt$N$r$p$<salt>$<key>`: scrypt with a random 16-byte salt per password, cost parameters kept in the hash, and a constant-time comparison on login. See [OWASP password storage guidance](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html).
 
-Default reads exclude `passwordHash`. The named `authentication` scope includes it for credential verification. Create results and deliberately unscoped queries can still contain the hash: future API responses must explicitly select safe DTO fields.
+Default reads exclude `passwordHash`. The named `authentication` scope includes it for credential verification. Create results and deliberately unscoped queries can still contain the hash, so API responses are built from explicit DTO fields (`toUserDto` in the auth service).
 
 ### categories
 
@@ -104,7 +104,7 @@ The category migration inserts `music/Music`, `workshop/Workshop`, `food/Food`, 
 
 One event has exactly one category. Deactivation retains the event: no `deleted_at` column or deletion API is planned. Database FKs also restrict deletion while reminders or designs reference an event; this is not a blanket prohibition on administrative SQL deletion.
 
-Store `15000000` paise for ₹1,50,000; convert to rupees for Indian formatting in the UI. Integer storage avoids floating point rounding. Future APIs must accept date inputs with an explicit timezone, and the UI displays `Asia/Kolkata`. PostgreSQL represents TIMESTAMPTZ instants internally in UTC; session timezone controls textual display. See [PostgreSQL date/time documentation](https://www.postgresql.org/docs/current/datatype-datetime.html).
+Store `15000000` paise for ₹1,50,000; convert to rupees for Indian formatting in the UI. Integer storage avoids floating point rounding. `POST /admin/events` only accepts dates with an explicit offset or `Z`, and the UI displays `Asia/Kolkata`. PostgreSQL represents TIMESTAMPTZ instants internally in UTC; session timezone controls textual display. See [PostgreSQL date/time documentation](https://www.postgresql.org/docs/current/datatype-datetime.html).
 
 ### user_favourite_categories
 
@@ -123,7 +123,7 @@ Store `15000000` paise for ₹1,50,000; convert to rupees for Indian formatting 
 | `theme`    | VARCHAR(16) | `sunset`, `ocean`, `forest`; default `sunset`          |
 | `stickers` | TEXT[]      | Default empty array; zero to three ordered sticker IDs |
 
-Allowed IDs: `star`, `heart`, `music-note`, `sparkles`, `party`. Nonempty arrays must be one dimensional with the normal one-based lower bound and contain no nulls. Repeated IDs are allowed. A database CHECK enforces size, dimensions, and membership; model validation rejects invalid arrays before SQL execution. Empty arrays are accepted (PostgreSQL represents them with no dimensions). Guest choices belong in browser storage; signed-in choices belong to the user/event pair.
+Allowed IDs: `star`, `heart`, `music-note`, `sparkles`, `party`. Nonempty arrays must be one dimensional with the normal one-based lower bound and contain no nulls. Repeated IDs are allowed. A database CHECK enforces size, dimensions, and membership; model validation rejects invalid arrays before SQL execution. Empty arrays are accepted (PostgreSQL represents them with no dimensions). Designs belong to the user/event pair, so saving one requires login.
 
 ## Indexes
 
@@ -142,9 +142,9 @@ Pair primary keys support per-user reads and prevent duplicate preferences. Reve
 
 Substring search initially scans candidate title/description values. If measured workload warrants it and the extension is available, add `pg_trgm` and separate GIN trigram indexes on title and description in a later migration. Very short searches can still have poor selectivity. See [PostgreSQL pg_trgm documentation](https://www.postgresql.org/docs/current/pgtrgm.html).
 
-## Query contract (business endpoints remain pending)
+## Query contract
 
-Browse requires `is_active = true AND starts_at > :now`. Add category, city, and text predicates together with AND. Use one captured `:now` and the same predicates for the result and count queries. Optional parameters below use null to mean no filter; actual APIs should omit unused predicates when building their Sequelize query.
+Implemented in `src/modules/events/event-query.ts` (`upcomingWhere`). Browse requires `is_active = true AND starts_at > :now`. Add category, city, and text predicates together with AND. Use one captured `:now` and the same predicates for the result and count queries. Optional parameters below use null to mean no filter; actual APIs should omit unused predicates when building their Sequelize query.
 
 ```sql
 SELECT e.* FROM events AS e
@@ -166,15 +166,13 @@ const pattern = `%${search.replace(/[\\%_]/g, '\\$&')}%`;
 
 Use `SELECT count(*)` with the same WHERE clauses for pagination metadata. The ID tie breaker gives deterministic ordering for equal timestamps; offset pagination can still shift when events are inserted or updated between requests.
 
-Feed adds the following predicate to the active/upcoming query (and optional filters if supported later):
+Feed first reads the user's favourite category codes (a primary-key lookup), then runs the same active/upcoming query with:
 
 ```sql
-AND EXISTS (
-  SELECT 1 FROM user_favourite_categories AS f
-  WHERE f.user_id = :authenticatedUserId
-    AND f.category_code = e.category_code
-)
+AND e.category_code IN (:favouriteCodes)
 ```
+
+An `EXISTS` subquery against `user_favourite_categories` would be equivalent in one round trip; with at most five categories the two-step version is simpler to read, and the `IN` list can use the category index.
 
 No favourites means no feed results. Reminder/design reads and writes must use both authenticated user ID and event ID. Never accept the owner ID from a request body. Database relationships prevent invalid ownership references; server authorization still has to enforce whose preferences can be accessed.
 
@@ -201,4 +199,4 @@ Normal unit tests initialize all models without contacting PostgreSQL, inspect a
 
 `npm run test:db` requires an explicitly supplied `TEST_DATABASE_URL` pointing to an empty disposable database whose name ends in `_test`. It refuses the configured application database, existing application tables or migration tracking, and nonempty public schemas. It runs actual migrations, constraint/relationship checks, persisted audit checks, combined filter/feed queries, rollback, and reapplication, then removes only its own tables and tracking. Never point it at production. See README for PowerShell commands.
 
-No live PostgreSQL verification is claimed until that suite has run with supplied credentials. The schema is deliberately limited to the assignment; there are no bookings, payments, notification delivery, refresh-token stores, or anonymous-user records.
+The suite has been run against PostgreSQL 16 (the Docker Compose database) and passes. The schema is deliberately limited to the assignment; there are no bookings, payments, notification delivery, refresh-token stores, or anonymous-user records.
