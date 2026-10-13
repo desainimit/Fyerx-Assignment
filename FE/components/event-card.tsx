@@ -10,7 +10,7 @@ export function EventCard({ event }: { event: EventItem }) {
       href={`/events/${event.id}`}
       className="group flex flex-col overflow-hidden rounded-xl border bg-card shadow-xs transition-shadow hover:shadow-md focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
     >
-      <div className="relative aspect-[16/9] overflow-hidden bg-muted">
+      <div className="relative aspect-16/9 overflow-hidden bg-muted">
         {/* Admins can enter any image host, so next/image's host allowlist doesn't fit. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img

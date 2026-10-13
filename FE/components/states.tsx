@@ -11,7 +11,7 @@ export function EventGridSkeleton({ count = 6 }: { count?: number }) {
     >
       {Array.from({ length: count }, (_, index) => (
         <div key={index} className="overflow-hidden rounded-xl border bg-card">
-          <Skeleton className="aspect-[16/9] rounded-none" />
+          <Skeleton className="aspect-16/9 rounded-none" />
           <div className="space-y-3 p-4">
             <Skeleton className="h-5 w-3/4" />
             <Skeleton className="h-4 w-1/2" />
