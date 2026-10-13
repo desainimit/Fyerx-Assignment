@@ -116,17 +116,12 @@ describe('backend HTTP infrastructure', () => {
     },
   );
 
-  it.each([
-    'auth',
-    'admin',
-    'events',
-    'favourites',
-    'feed',
-    'reminders',
-    'card-design',
-  ])('does not expose unfinished %s endpoints', async (feature) => {
-    await request(app.getHttpServer()).get(`/api/v1/${feature}`).expect(404);
-  });
+  it.each(['auth', 'admin', 'card-design', 'does-not-exist'])(
+    'returns 404 for /%s, which has no handler',
+    async (path) => {
+      await request(app.getHttpServer()).get(`/api/v1/${path}`).expect(404);
+    },
+  );
 
   it('returns a safe 503 and recovers on a later successful database check', async () => {
     connection.authenticate.mockRejectedValueOnce(

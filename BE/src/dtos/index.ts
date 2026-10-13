@@ -12,3 +12,12 @@ export {
   AuthResultDto,
   MeDto,
 } from './auth.dtos';
+export {
+  PageQueryDto,
+  EventQueryDto,
+  CreateEventDto,
+  EventStatusDto,
+  CategoryDto,
+  EventDto,
+  EventFiltersDto,
+} from './event.dtos';
