@@ -6,7 +6,7 @@
   "license": "UNLICENSED",
   "engines": {
     "node": ">=22.0.0",
-    "npm": ">=11.0.0"
+    "npm": ">=10.0.0"
   },
   "scripts": {
     "local": "cross-env NODE_ENV=development nest start --watch",
@@ -27,8 +27,10 @@
     "make:migration": "ts-node scripts/migration.script.ts",
     "db:migrate": "cross-env NODE_ENV=development ts-node -r tsconfig-paths/register src/database/migrate.ts up",
     "db:migrate:status": "cross-env NODE_ENV=development ts-node -r tsconfig-paths/register src/database/migrate.ts status",
+    "db:seed": "cross-env NODE_ENV=development ts-node -r tsconfig-paths/register src/database/seed.ts",
     "db:migrate:prod": "cross-env NODE_ENV=production node dist/database/migrate.js up",
-    "db:migrate:status:prod": "cross-env NODE_ENV=production node dist/database/migrate.js status"
+    "db:migrate:status:prod": "cross-env NODE_ENV=production node dist/database/migrate.js status",
+    "db:seed:prod": "cross-env NODE_ENV=production node dist/database/seed.js"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.5",

@@ -3,9 +3,11 @@ import {
   ArrayNotEmpty,
   IsArray,
   IsBoolean,
+  IsEmail,
   IsEnum,
   IsInt,
   IsNotEmpty,
+  IsOptional,
   IsString,
   IsUrl,
   Max,
@@ -99,6 +101,17 @@ export class EnvironmentVariables {
   @Min(1)
   @Max(86400)
   JWT_TTL_SECONDS = 3600;
+
+  // Only the seed script needs these; the API starts without them.
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => trimString(value))
+  @IsEmail()
+  ADMIN_EMAIL?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(8)
+  ADMIN_PASSWORD?: string;
 }
 
 export function validateEnvironment(

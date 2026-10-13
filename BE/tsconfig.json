@@ -28,6 +28,7 @@
       "@models": ["src/models/index"],
       "@lib": ["src/libs/index"],
       "@app-types/*": ["src/types/*"],
+      "@utils/*": ["src/utils/*"],
       "@context/*": ["src/common/context/*"],
       "@decorators": ["src/common/decorators/index"],
       "@guards/*": ["src/common/guards/*"],
