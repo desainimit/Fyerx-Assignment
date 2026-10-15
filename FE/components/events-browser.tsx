@@ -1,7 +1,7 @@
 "use client";
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { SearchX, Search, X } from "lucide-react";
 import { EventCard } from "@/components/event-card";
 import { Pagination } from "@/components/pagination";
@@ -29,7 +29,6 @@ const ALL = "all";
  * combine, survive a refresh and can be shared as a link.
  */
 export function EventsBrowser() {
-  const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const category = params.get("category") ?? "";
@@ -38,6 +37,15 @@ export function EventsBrowser() {
   const page = Number(params.get("page")) || 1;
 
   const [search, setSearch] = useState(q);
+  const [previousQuery, setPreviousQuery] = useState(q);
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  // Shared links and browser navigation must also update the search field.
+  if (q !== previousQuery) {
+    setPreviousQuery(q);
+    setSearch(q);
+  }
+
   const filters = useApi<{ categories: Category[]; cities: string[] }>(
     "events/filters",
   );
@@ -49,8 +57,9 @@ export function EventsBrowser() {
   query.set("page", String(page));
   const { state, retry } = useApi<EventItem[]>(`events?${query}`);
 
-  function update(changes: Record<string, string>) {
-    const next = new URLSearchParams(params.toString());
+  const update = useCallback((changes: Record<string, string>) => {
+    // Read the current URL so a delayed search cannot restore removed filters.
+    const next = new URLSearchParams(window.location.search);
     for (const [key, value] of Object.entries(changes)) {
       if (value) next.set(key, value);
       else next.delete(key);
@@ -58,22 +67,29 @@ export function EventsBrowser() {
     // Any filter change starts again from page 1.
     if (!("page" in changes)) next.delete("page");
     const qs = next.toString();
-    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-  }
+    // These filters fetch on the client. Next.js syncs useSearchParams with
+    // replaceState, and the URL changes immediately even during rapid edits.
+    window.history.replaceState(
+      null,
+      "",
+      `${pathname}${qs ? `?${qs}` : ""}${window.location.hash}`,
+    );
+  }, [pathname]);
 
   // Wait until typing pauses before searching, instead of on every key.
   useEffect(() => {
     const trimmed = search.trim();
     if (trimmed === q) return;
     const timer = setTimeout(() => update({ q: trimmed }), 350);
+    searchTimer.current = timer;
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search]);
+  }, [search, q, update]);
 
-  const hasFilters = Boolean(category || city || q);
+  const hasFilters = Boolean(category || city || q || search);
   function clearFilters() {
+    clearTimeout(searchTimer.current);
     setSearch("");
-    router.replace(pathname, { scroll: false });
+    update({ category: "", city: "", q: "" });
   }
 
   const options =
