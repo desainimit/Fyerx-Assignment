@@ -109,15 +109,6 @@ The next index I would add is a `pg_trgm` GIN index on `title` and `description`
 2. The admin layout checks the role again.
 3. The NestJS API guards every route by default, and `@Roles(Admin)` on the admin controller returns 401 or 403 even if someone calls the API directly.
 
-## What's left / known limitations
-
-- **Screen recording**: still to do.
-- **Tokens** last one hour, with no refresh or server-side revocation. Logging out deletes the cookie.
-- **Pagination** uses offset paging, so a page can shift if events change between requests.
-- **Reminders and card designs** need an account. The brief asks for them to be saved through the API, which needs to know who the user is.
-- **Admins** can create and activate or deactivate events, but can't edit them. The brief doesn't ask for editing.
-- **Deployment**: the app isn't deployed. Everything runs locally.
-
 ## AI assistance
 
 - **OpenAI Codex** was used for the backend foundation: scaffold, configuration, JWT guard, request context, audit fields, models, migrations and their tests.
