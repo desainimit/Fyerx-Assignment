@@ -40,7 +40,13 @@ export function configureApplication(app: INestApplication): void {
       .setVersion('1')
       .addBearerAuth()
       .build();
-    const document = SwaggerModule.createDocument(app, documentOptions);
-    SwaggerModule.setup(`${API_PREFIX}/docs`, app, document);
+    const document = SwaggerModule.createDocument(app, documentOptions, {
+      // "Events_browse" instead of the default "EventsController_browse_v1".
+      operationIdFactory: (controllerKey, methodKey) =>
+        `${controllerKey.replace(/Controller$/, '')}_${methodKey}`,
+    });
+    SwaggerModule.setup(`${API_PREFIX}/docs`, app, document, {
+      swaggerOptions: { persistAuthorization: true },
+    });
   }
 }

@@ -28,7 +28,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 md:py-10">
             {children}
           </main>
-          <Toaster richColors position="top-center" />
+          <Toaster richColors position="bottom-right" />
         </SessionProvider>
       </body>
     </html>

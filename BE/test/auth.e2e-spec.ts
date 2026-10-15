@@ -244,7 +244,12 @@ describe('shared authentication and request context', () => {
     await request(app.getHttpServer())
       .get('/api/v1/auth-fixture/admin')
       .set('Authorization', `Bearer ${visitorToken}`)
-      .expect(403);
+      .expect(403)
+      .expect({
+        status: false,
+        message: 'Access restricted to admin accounts',
+        error: 'Forbidden',
+      });
     await request(app.getHttpServer())
       .get('/api/v1/auth-fixture/admin')
       .set('Authorization', `Bearer ${adminToken}`)

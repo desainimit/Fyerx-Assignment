@@ -4,7 +4,8 @@ export type {
   ApiErrorResponse,
   PaginationMetadata,
 } from './common.dtos';
-export { HealthDataDto, HealthResponseDto } from './health.dtos';
+export { PaginationMetaDto, ErrorResponseDto } from './common.dtos';
+export { HealthDataDto } from './health.dtos';
 export {
   SignupDto,
   LoginDto,

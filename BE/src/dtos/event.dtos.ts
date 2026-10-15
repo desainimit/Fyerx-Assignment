@@ -24,13 +24,18 @@ const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
 
 export class PageQueryDto {
-  @ApiPropertyOptional({ default: 1, minimum: 1 })
+  @ApiPropertyOptional({ type: 'integer', default: 1, minimum: 1 })
   @Type(() => Number)
   @IsInt()
   @Min(1)
   page = 1;
 
-  @ApiPropertyOptional({ default: 9, minimum: 1, maximum: 50 })
+  @ApiPropertyOptional({
+    type: 'integer',
+    default: 9,
+    minimum: 1,
+    maximum: 50,
+  })
   @Type(() => Number)
   @IsInt()
   @Min(1)

@@ -39,7 +39,9 @@ export class AuthGuard implements CanActivate {
       targets,
     );
     if (roles?.length && !roles.includes(user.role)) {
-      throw new ForbiddenException('Insufficient permissions');
+      throw new ForbiddenException(
+        `Access restricted to ${roles.join(' or ')} accounts`,
+      );
     }
     return true;
   }
